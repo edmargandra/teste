@@ -1,0 +1,180 @@
+<main>
+  <h1>Controle de fluxo de caixa do comerciante</h1>
+  <nav aria-label="Menu">
+    <button id="menu-lancamento" type="button" [class]="painel() === 'lancamento' ? 'primario' : 'secundario'" [attr.aria-current]="painel() === 'lancamento' ? 'page' : null" (click)="mostrarLancamento()">Lançamento</button>
+    <button id="menu-consolidado" type="button" [class]="painel() === 'consolidado' ? 'primario' : 'secundario'" [attr.aria-current]="painel() === 'consolidado' ? 'page' : null" (click)="mostrarConsolidado()">Consolidado</button>
+  </nav>
+
+  <section id="painel-lancamento" aria-labelledby="titulo-lancamento" [hidden]="painel() !== 'lancamento'">
+    <h2 id="titulo-lancamento">Lançamento</h2>
+    <div id="aviso-lista" class="aviso" [class.recusa]="avisoListaRecusa()" role="status" aria-live="polite">{{ avisoLista() }}</div>
+
+    <div class="bloco">
+      <label class="rotulo" for="filtro-data">Data</label>
+      <input id="filtro-data" class="campo" type="date" autocomplete="off" [disabled]="bloqueado()" [value]="filtroData()" (input)="filtroData.set(valorDe($event))" (change)="filtroData.set(valorDe($event))">
+    </div>
+
+    <div class="bloco">
+      <label class="rotulo" for="filtro-tipo">Tipo de pagamento</label>
+      <select id="filtro-tipo" class="campo" [disabled]="bloqueado()" [value]="filtroTipo()" (change)="filtroTipo.set(valorDe($event))">
+        <option value=""></option>
+        <option value="Pix">Pix</option>
+        <option value="cartão de crédito">cartão de crédito</option>
+        <option value="cartão de débito">cartão de débito</option>
+        <option value="dinheiro">dinheiro</option>
+        <option value="boleto">boleto</option>
+        <option value="depósito">depósito</option>
+      </select>
+    </div>
+
+    <div class="bloco">
+      <label class="rotulo" for="filtro-direcao">Débito ou Crédito</label>
+      <select id="filtro-direcao" class="campo" [disabled]="bloqueado()" [value]="filtroDirecao()" (change)="filtroDirecao.set(valorDe($event))">
+        <option value=""></option>
+        <option value="debito">Débito</option>
+        <option value="credito">Crédito</option>
+      </select>
+    </div>
+
+    <button id="btn-filtrar" class="secundario" type="button" [disabled]="bloqueado()" (click)="filtrar()">Consultar lançamento</button>
+    <button id="btn-incluir" class="primario" type="button" [disabled]="bloqueado()" (click)="abrirInclusao()">Incluir lançamento</button>
+    <div id="linhas">
+      @for (linha of linhas(); track linha.id) {
+        <div [id]="'item-' + linha.id">
+          <div class="linha">
+            <span class="quantia" [id]="'valor-' + linha.id">{{ quantiaLinha(linha) }}</span>
+            <span [class]="classeDaDirecao(linha.direcao)">{{ rotuloDirecao(linha.direcao) }}</span>
+            <span [id]="'descricao-' + linha.id">{{ linha.descricao }}</span>
+            <span>{{ linha.data }}</span>
+            <span>{{ linha.tipo_pagamento }}</span>
+            @if (linha.comprovante) {
+              <button type="button" class="secundario" [id]="'abrir-' + linha.id" [attr.aria-describedby]="'valor-' + linha.id + ' descricao-' + linha.id" (click)="abrirComprovante(linha)">Abrir comprovante</button>
+            }
+            <button type="button" class="secundario" [id]="'alterar-' + linha.id" (click)="abrirAlteracao(linha)">Alterar lançamento</button>
+          </div>
+          @if (comprovanteAberto()?.id === linha.id) {
+            <div class="comprovante" [id]="'comprovante-' + linha.id" role="group" [attr.data-linha]="linha.id" [attr.aria-label]="comprovanteAberto()?.frase">
+              <p>Comprovante</p>
+              <p>Data</p>
+              <p>{{ linha.data }}</p>
+              <p>Tipo de pagamento</p>
+              <p>{{ linha.tipo_pagamento }}</p>
+              <p>Valor</p>
+              <p>{{ quantiaLinha(linha) }}</p>
+              @if (comprovanteAberto()?.texto) {
+                <pre>{{ comprovanteAberto()?.texto }}</pre>
+              } @else {
+                <p>O arquivo não tem texto.</p>
+              }
+              <button type="button" class="secundario" [id]="'fechar-' + linha.id" (click)="fecharComprovante(linha.id)">Fechar comprovante</button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+    <div class="paginas">
+      <button id="btn-anterior" class="secundario" type="button" [disabled]="anteriorDesabilitado()" (click)="paginaAnterior()">Página anterior</button>
+      <button id="btn-seguinte" class="secundario" type="button" [disabled]="seguinteDesabilitado()" (click)="paginaSeguinte()">Página seguinte</button>
+    </div>
+  </section>
+
+  <section id="painel-consolidado" aria-labelledby="titulo-consolidado" [hidden]="painel() !== 'consolidado'">
+    <h2 id="titulo-consolidado">Consolidado</h2>
+    <div id="aviso-consolidado" class="aviso" [class.recusa]="avisoConsolidadoRecusa()" role="status" aria-live="polite">{{ avisoConsolidado() }}</div>
+
+    <div class="bloco">
+      <label class="rotulo" for="consolidado-inicio">Data inicial</label>
+      <input id="consolidado-inicio" class="campo" type="date" autocomplete="off" [disabled]="bloqueado()" [value]="inicio()" (input)="inicio.set(valorDe($event))" (change)="inicio.set(valorDe($event))">
+    </div>
+
+    <div class="bloco">
+      <label class="rotulo" for="consolidado-fim">Data final</label>
+      <input id="consolidado-fim" class="campo" type="date" autocomplete="off" [disabled]="bloqueado()" [value]="fim()" (input)="fim.set(valorDe($event))" (change)="fim.set(valorDe($event))">
+    </div>
+
+    <button id="btn-saldo" class="primario" type="button" [disabled]="bloqueado()" (click)="verSaldo()">Ver saldo diário consolidado</button>
+    <div id="acordeao" class="acordeao">
+      @for (dia of diasAcordeao(); track dia.data) {
+        <details>
+          <summary>Data {{ dia.data }} saldo da data {{ quantiaTexto(dia.saldo) }}</summary>
+          @for (grupo of dia.grupos; track $index) {
+            <div class="tipo-saldo">
+              <p><span class="rotulo">Tipo de pagamento</span> {{ grupo.tipo }}</p>
+              <p><span class="rotulo">total de créditos</span> {{ quantiaTexto(grupo.creditos) }}</p>
+              <p><span class="rotulo">total de débitos</span> {{ quantiaTexto(grupo.debitos) }}</p>
+              <p><span class="rotulo">saldo do tipo</span> {{ quantiaTexto(grupo.saldo) }}</p>
+            </div>
+          }
+        </details>
+      }
+      @if (temTotal()) {
+        <p id="total-periodo" class="total-periodo">
+          <span class="rotulo">Total do período</span>
+          <span class="quantia">{{ totalPeriodo() }}</span>
+        </p>
+      }
+    </div>
+  </section>
+</main>
+
+<dialog #popup id="popup" aria-labelledby="titulo-popup" (close)="aoFecharPopup()">
+  <h2 id="titulo-popup">{{ tituloPopup() }}</h2>
+  <div id="aviso-registro" class="aviso" [class.recusa]="avisoRegistroRecusa()" role="status" aria-live="polite">{{ avisoRegistro() }}</div>
+
+  <div class="bloco">
+    <label class="rotulo" for="data">Data</label>
+    <input id="data" class="campo" type="date" [attr.aria-label]="data() ? null : 'Data vazia'" [attr.aria-describedby]="describedbyData()" [attr.aria-invalid]="invalido('data')" [attr.aria-errormessage]="mensagem('data')" autocomplete="off" [class.recusado]="invalidos().has('data')" [value]="data()" (input)="data.set(valorDe($event))" (change)="data.set(valorDe($event))">
+    <p id="data-descricao" class="apoio">dia de calendário</p>
+    <p id="erro-data" class="erro">{{ erros()['data'] }}</p>
+  </div>
+
+  <div class="bloco">
+    <label class="rotulo" for="valor">Valor</label>
+    <input id="valor" class="campo quantia" type="text" inputmode="decimal" autocomplete="off" [attr.aria-label]="rotuloValor()" [attr.aria-invalid]="invalido('valor')" [attr.aria-describedby]="mensagem('valor')" [attr.aria-errormessage]="mensagem('valor')" [class.recusado]="invalidos().has('valor')" [value]="valor()" (input)="aoTexto($event, valor)" (blur)="anunciarValor()">
+    <p id="erro-valor" class="erro">{{ erros()['valor'] }}</p>
+  </div>
+
+  <div class="bloco">
+    <div class="escolha" role="radiogroup" aria-label="Débito ou Crédito">
+      <label class="opcao">
+        <input id="debito" type="radio" name="direcao" value="debito" [checked]="direcao() === 'debito'" [class.recusado]="invalidos().has('debito')" [attr.aria-invalid]="invalido('debito')" [attr.aria-describedby]="mensagem('debito')" [attr.aria-errormessage]="mensagem('debito')" (change)="direcao.set('debito')">
+        <span class="palavra-debito">Débito</span>
+      </label>
+      <label class="opcao">
+        <input id="credito" type="radio" name="direcao" value="credito" [checked]="direcao() === 'credito'" [class.recusado]="invalidos().has('credito')" [attr.aria-invalid]="invalido('credito')" [attr.aria-describedby]="mensagem('debito')" [attr.aria-errormessage]="mensagem('debito')" (change)="direcao.set('credito')">
+        <span class="palavra-credito">Crédito</span>
+      </label>
+    </div>
+    <p id="erro-debito" class="erro">{{ erros()['debito'] }}</p>
+  </div>
+
+  <div class="bloco">
+    <label class="rotulo" for="tipo-registro">Tipo de pagamento do lançamento</label>
+    <select id="tipo-registro" class="campo" [class.recusado]="invalidos().has('tipo-registro')" [attr.aria-invalid]="invalido('tipo-registro')" [attr.aria-describedby]="mensagem('tipo-registro')" [attr.aria-errormessage]="mensagem('tipo-registro')" [value]="tipo()" (change)="tipo.set(valorDe($event))">
+      <option value=""></option>
+      <option value="Pix">Pix</option>
+      <option value="cartão de crédito">cartão de crédito</option>
+      <option value="cartão de débito">cartão de débito</option>
+      <option value="dinheiro">dinheiro</option>
+      <option value="boleto">boleto</option>
+      <option value="depósito">depósito</option>
+    </select>
+    <p id="erro-tipo-registro" class="erro">{{ erros()['tipo-registro'] }}</p>
+  </div>
+
+  <div class="bloco">
+    <label class="rotulo" for="descricao">Descrição</label>
+    <textarea id="descricao" class="campo" rows="2" [class.recusado]="invalidos().has('descricao')" [attr.aria-invalid]="invalido('descricao')" [attr.aria-describedby]="mensagem('descricao')" [attr.aria-errormessage]="mensagem('descricao')" [value]="descricao()" (input)="aoTexto($event, descricao)"></textarea>
+    <p id="erro-descricao" class="erro">{{ erros()['descricao'] }}</p>
+  </div>
+
+  <div class="bloco">
+    <label class="rotulo" for="comprovante">Comprovante</label>
+    <input id="comprovante" class="campo arquivo" type="file" [class.recusado]="invalidos().has('comprovante')" [attr.aria-invalid]="invalido('comprovante')" [attr.aria-describedby]="mensagem('comprovante')" [attr.aria-errormessage]="mensagem('comprovante')" (change)="aoArquivo($event)">
+    <p id="manter-comprovante" class="apoio" [hidden]="!manterComprovante()">Sem arquivo novo, o comprovante já gravado permanece.</p>
+    <p id="erro-comprovante" class="erro">{{ erros()['comprovante'] }}</p>
+  </div>
+
+  <button id="btn-gravar" class="primario" type="button" [disabled]="gravando()" (click)="gravar()">{{ textoGravar() }}</button>
+  <button id="btn-fechar" class="secundario" type="button" (click)="fecharPopup()">Fechar</button>
+</dialog>

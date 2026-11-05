@@ -1,0 +1,29 @@
+server:
+  port: 8081
+  servlet:
+    encoding:
+      charset: UTF-8
+      force-request: true
+
+spring:
+  application:
+    name: lancamento
+  mvc:
+    problemdetails:
+      enabled: true
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+  datasource:
+    url: jdbc:postgresql://localhost:5432/caixa
+    username: caixa
+    password: caixa
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
